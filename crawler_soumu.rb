@@ -2,29 +2,7 @@ require 'rubygems'
 require 'mechanize'
 require 'mysql'
 require '../clip_conf.rb'
-
-# SQL実行用の関数
-def exec_sql(sql)
-
-  # puts "execSql------"
-  # puts sql 
-  #DB接続
-  connection = Mysql::connect("clip-rds.cshigfe65cmx.ap-northeast-1.rds.amazonaws.com",DB_USER, DB_PASS, DB_NAME)
-  connection.query("set character set utf8")
-
-  rs = connection.query(sql); 
-  if rs.nil?
-  	return
-  end
-  results = []
-  rs.each do |r|
-    results << r
-  end
-  #"execSql results------"
-  #puts results
-  return results
-  connection.close
-end
+require './dbAccess.rb'
 
 domain = "www.soumu.go.jp"
 baseurl = "http://" + domain
@@ -32,7 +10,7 @@ ministry = "総務省"
 
 #一覧ページのURLを作成・格納
 archive_urls = []
-for year in 15..18 do
+for year in 18..18 do
 	# puts year
 	for month in 1..12 do
 		if year == 18 && (month == 10 or month == 11 or month == 12)
