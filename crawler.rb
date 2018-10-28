@@ -32,7 +32,7 @@ ministry = "総務省"
 
 #一覧ページのURLを作成・格納
 archive_urls = []
-for year in 18..18 do
+for year in 15..18 do
 	# puts year
 	for month in 1..12 do
 		if year == 18 && (month == 10 or month == 11 or month == 12)
@@ -40,12 +40,12 @@ for year in 18..18 do
 			next
 		end
 		# puts month
-		archive_url = baseurl + "/menu_news/s-news/" + String(year) + String(format('%02d',month))+ "m.html"
+		archive_url = baseurl + "/menu_news/s-news/" + String(format('%02d',year)) + String(format('%02d',month))+ "m.html"
 		archive_urls << archive_url
 	end
 end
 archive_urls += [ baseurl + "/menu_news/s-news/index.html"]
-# puts archive_urls
+puts archive_urls
 
 #一覧ページからアンカーテキストに報告書を含むリンクを抽出
 pages = []
@@ -53,7 +53,7 @@ archive_urls.each do |archive_url|
   agent = Mechanize.new
   archive = agent.get(archive_url)
   # puts archive
-  anchor_els = archive.search("a")
+  anchor_els = archive.search("table a")
 
   anchor_els.each do | anchor_ele |
 
@@ -65,9 +65,14 @@ archive_urls.each do |archive_url|
 
 	page_url = anchor_ele.get_attribute(:href)
 
+	# /を追加
+	if ! page_url.start_with?("/")
+		page_url = "/" + page_url 
+	end
 
-	if !page_url.include?("soumu.go.jp")
-		page_url = baseurl + page_url
+	# ドメイン名を追加
+	if ! page_url.include?("soumu.go.jp")
+		page_url = baseurl + page_url 
 	end
 
 	page = {"title" => anchor_txt, "page_url" => page_url}
@@ -81,13 +86,16 @@ end
 #詳細ページからPDFのURLを抽出・DBに格納
 pages.each do | page |
 	puts page["title"]
+	puts page["page_url"]
 	#すでにDBに登録されてればスキップ
 	sql = "SELECT url FROM page";
 	rs = exec_sql(sql);
 	inserted_urls = []
+	# pp rs
 	rs.each do | arr |
 		inserted_urls << arr[0]
 	end
+
 	if inserted_urls.index(page["page_url"])
 		puts "already inserted"
 		next
@@ -107,6 +115,7 @@ pages.each do | page |
 	#最新のページIDを取得
 	sql = "SELECT max(id) FROM page;"
 	page_id = exec_sql(sql)[0][0];
+	puts "got page_id"
 
 	#アンカーテキスト要素の配列でループ
 	is_page_inserted = false;
