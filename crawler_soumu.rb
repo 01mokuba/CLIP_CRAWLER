@@ -31,6 +31,12 @@ archive_urls.each do |archive_url|
   agent = Mechanize.new
   archive = agent.get(archive_url)
   # puts archive
+  # tr_els = archive.search("table tr")
+  # tr_els.each do | tr_ele |
+  # 	anchor_els = tr_ele.search("a")
+  # 	anchor_els.each
+  # end
+
   anchor_els = archive.search("table a")
 
   anchor_els.each do | anchor_ele |
