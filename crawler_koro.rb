@@ -31,7 +31,7 @@ archive_urls.each do |archive_url|
   agent = Mechanize.new
   archive = agent.get(archive_url)
 
-  anchor_els = archive.search("ul.m-listNews li a")
+  anchor_els = archive.search("ul.m-listNews a, div#contents table a")
 
   anchor_els.each do | anchor_ele |
 
@@ -43,13 +43,13 @@ archive_urls.each do |archive_url|
 
 	page_url = anchor_ele.get_attribute(:href)
 
-	# /を追加
-	if ! page_url.start_with?("/")
-		page_url = "/" + page_url 
-	end
-
 	# ドメイン名を追加
 	if ! page_url.include?("mhlw.go.jp")
+		# /を追加
+		if ! page_url.start_with?("/")
+			page_url = "/" + page_url 
+		end
+
 		page_url = baseurl + page_url 
 	end
 
@@ -61,74 +61,73 @@ end
 
 puts pages
 
-# #詳細ページからPDFのURLを抽出・DBに格納
-# pages.each do | page |
-# 	puts page["title"]
-# 	puts page["page_url"]
-# 	#すでにDBに登録されてればスキップ
-# 	sql = "SELECT url FROM page";
-# 	rs = exec_sql(sql);
-# 	inserted_urls = []
-# 	# pp rs
-# 	rs.each do | arr |
-# 		inserted_urls << arr[0]
-# 	end
+#詳細ページからPDFのURLを抽出・DBに格納
+pages.each do | page |
+	puts page["title"]
+	puts page["page_url"]
+	#すでにDBに登録されてればスキップ
+	sql = "SELECT url FROM page WHERE ministry = '" + ministry + "';";
+	rs = exec_sql(sql);
+	inserted_urls = []
+	rs.each do | arr |
+		inserted_urls << arr[0]
+	end
 
-# 	if inserted_urls.index(page["page_url"])
-# 		puts "already inserted"
-# 		next
-# 	end
+	if inserted_urls.index(page["page_url"])
+		puts "already inserted"
+		next
+	end
 
-# 	sleep(1) #攻撃を避けるため遅延
-# 	agent = Mechanize.new
-# 	detail_page = agent.get(page["page_url"])
+	sleep(1) #攻撃を避けるため遅延
+	agent = Mechanize.new
+	detail_page = agent.get(page["page_url"])
 
-# 	#コンテンツ内にリンク要素がなければスキップ
-# 	anchor_els = detail_page.search("#contentsWrapper a")
-# 	if anchor_els.empty?
-# 		puts "no ancher"
-# 		next
-# 	end
+	#コンテンツ内にリンク要素がなければスキップ
+	anchor_els = detail_page.search("#contents a, #content a")
+	if anchor_els.empty?
+		puts "no ancher"
+		next
+	end
 
-# 	#最新のページIDを取得
-# 	sql = "SELECT max(id) FROM page;"
-# 	page_id = exec_sql(sql)[0][0];
-# 	puts "got page_id"
+	#最新のページIDを取得
+	sql = "SELECT max(id) FROM page;"
+	page_id = exec_sql(sql)[0][0];
+	puts "got page_id" + page_id
 
-# 	#アンカーテキスト要素の配列でループ
-# 	is_page_inserted = false;
-# 	anchor_els.each do | anchor_ele |
-# 		#アンカーリンクにPOFが含まれなければスキップ
-# 		anchor_link = anchor_ele.get_attribute(:href)
-# 		if !anchor_link.end_with?("pdf")
-# 			puts "no pdf"
-# 			next
-# 		end
-# 		doc_url = anchor_link
+	#アンカーテキスト要素の配列でループ
+	is_page_inserted = false;
+	anchor_els.each do | anchor_ele |
+		#アンカーリンクにPOFが含まれなければスキップ
+		anchor_link = anchor_ele.get_attribute(:href)
+		if !anchor_link.end_with?("pdf")
+			puts "not pdf"
+			next
+		end
+		doc_url = anchor_link
 
-# 		#初回のみページをDBに格納
-# 		if is_page_inserted == false 
-# 		  sql  ="INSERT INTO page(id, title, url, domain, ministry ,ins_time)"
-# 		  sql += " VALUES(NULL, '" + page["title"] +"', '" + page["page_url"] + "', '" + domain+ "','" + ministry + "', CURRENT_TIMESTAMP);"
-# 		  exec_sql(sql)
+		#初回のみページをDBに格納
+		if is_page_inserted == false 
+		  sql  ="INSERT INTO page(id, title, url, domain, ministry ,ins_time)"
+		  sql += " VALUES(NULL, '" + page["title"] +"', '" + page["page_url"] + "', '" + domain+ "','" + ministry + "', CURRENT_TIMESTAMP);"
+		  exec_sql(sql)
 
-# 		  is_page_inserted = true
-# 		  sql = "SELECT max(id) FROM page;"
-# 		  page_id = exec_sql(sql)[0][0];
-# 		  puts "page inseted"
-# 		end
+		  is_page_inserted = true
+		  sql = "SELECT max(id) FROM page;"
+		  page_id = exec_sql(sql)[0][0];
+		  puts "page inserted"
+		end
 	
-# 		#ドキュメントURLにドメインを追加
-# 		if !doc_url.include?("soumu.go.jp")
-# 			doc_url = baseurl + doc_url
-# 		end
+		#ドキュメントURLにドメインを追加
+		if !doc_url.include?("mhlw.go.jp")
+			doc_url = baseurl + doc_url
+		end
 
-# 		#ドキュメントをDBに格納
-# 		sql  = "INSERT INTO document(id, url, page_id, is_texted, pub_date,ins_time)"
-# 		sql += " VALUES (null,'" + doc_url + "', " + page_id + ", 0, NULL, CURRENT_TIMESTAMP());"
-# 		exec_sql(sql)
-# 		puts "doc inseted"
+		#ドキュメントをDBに格納
+		sql  = "INSERT INTO document(id, url, page_id, is_texted, pub_date,ins_time)"
+		sql += " VALUES (null,'" + doc_url + "', " + page_id + ", 0, NULL, CURRENT_TIMESTAMP());"
+		exec_sql(sql)
+		puts "doc inserted"
 
-# 	end 
+	end 
 
-# end
+end
